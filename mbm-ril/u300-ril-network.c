@@ -269,11 +269,13 @@ int getSignalStrength(RIL_SignalStrength_v6 *signalStrength){
 
     memset(signalStrength, 0, sizeof(RIL_SignalStrength_v6));
 
-    signalStrength->LTE_SignalStrength.signalStrength = 0x7FFFFFFF;
-    signalStrength->LTE_SignalStrength.rsrp = 0x7FFFFFFF;
-    signalStrength->LTE_SignalStrength.rsrq = 0x7FFFFFFF;
-    signalStrength->LTE_SignalStrength.rssnr = 0x7FFFFFFF;
-    signalStrength->LTE_SignalStrength.cqi = 0x7FFFFFFF;
+    /* MBM does not support LTE so set to get GSM signal strength
+     * using -1 for unknown as defined in SignalStrength.java */
+    signalStrength->LTE_SignalStrength.signalStrength = -1;
+    signalStrength->LTE_SignalStrength.rsrp = -1;
+    signalStrength->LTE_SignalStrength.rsrq = -1;
+    signalStrength->LTE_SignalStrength.rssnr = -1;
+    signalStrength->LTE_SignalStrength.cqi = -1;
 
     err = at_send_command_singleline("AT+CSQ", "+CSQ:", &atresponse);
 
