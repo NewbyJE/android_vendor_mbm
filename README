@@ -1,0 +1,5 @@
+TouchPad4G_vendor_mbm
+
+Modified MBM HAL 4.0.0 ALPHA release for CM9 TouchPad 4G
+
+Files should be placed in android/system/vendor/mbm
