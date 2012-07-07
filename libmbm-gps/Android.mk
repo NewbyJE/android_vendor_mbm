@@ -5,7 +5,7 @@ ifeq ($(strip $(BOARD_USES_MBM_GPS)),true)
 LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
-LOCAL_MODULE := gps.$(TARGET_PRODUCT)
+LOCAL_MODULE := gps.$(TARGET_BOOTLOADER_BOARD_NAME)
 LOCAL_MODULE_TAGS := optional
 
 LOCAL_SRC_FILES := \
