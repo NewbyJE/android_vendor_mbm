@@ -593,6 +593,11 @@ static void processRequest(int request, void *data, size_t datalen, RIL_Token t)
             getCachedStkMenu();
             break;
 
+       /* Network neighbors */
+       case RIL_REQUEST_GET_NEIGHBORING_CELL_IDS:
+            requestNeighboringCellIDs(data, datalen, t);
+            break;
+
         default:
             LOGW("FIXME: Unsupported request logged: %s",
                  requestToString(request));
@@ -648,8 +653,6 @@ static void onRequest(int request, void *data, size_t datalen, RIL_Token t)
         LOGE("%s() failed to release queue mutex: %s!",
             __func__, strerror(err));
 }
-
-
 
 /**
  * Call from RIL to us to find out whether a specific request code
@@ -893,6 +896,9 @@ static void onUnsolicited(const char *s, const char *sms_pdu)
         onStkProactiveCommand(s);
     else if (strStartsWith(s, "*STKN:"))
         onStkEventNotify(s);
+    else if (strStartsWith(s, "+PACSP0")) { 
+        setRadioState(RADIO_STATE_SIM_READY); 
+    } 
 }
 
 static void signalCloseQueues(void)

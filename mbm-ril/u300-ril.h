@@ -37,6 +37,10 @@ extern const struct RIL_Env *s_rilenv;
 void enqueueRILEvent(int isPrio, void (*callback) (void *param),
                      void *param, const struct timespec *relativeTime);
 
+/* Maximum number of neighborhood cells is set based on AT specification. 
+ * It can maximum handle 16, including the current cell. */
+#define MAX_NUM_NEIGHBOR_CELLS 15
+
 #define RIL_EVENT_QUEUE_NORMAL 0
 #define RIL_EVENT_QUEUE_PRIO 1
 #define RIL_EVENT_QUEUE_ALL 2

@@ -30,6 +30,7 @@
 #include "u300-ril.h"
 #include "u300-ril-error.h"
 #include "u300-ril-messaging.h"
+#include "u300-ril-network.h"
 #include "u300-ril-sim.h"
 #include "u300-ril-pdp.h"
 
@@ -235,8 +236,7 @@ void onNetworkTimeReceived(const char *s)
     else {
         if (at_tok_nextint(&tok, &dst) != 0) {
             dst = 0;
-            LOGE("%s() Failed to parse NITZ dst, fallbacking to dst=0 %s",
-	         __func__, s);
+            LOGD("%s() MBM does not support dst, set dst=0", __func__); 
         }
         if (!(asprintf(&response, "%s%+03d,%02d", time + 2, tz + (dst * 4), dst))) {
             free(line);
@@ -269,8 +269,6 @@ int getSignalStrength(RIL_SignalStrength_v6 *signalStrength){
 
     memset(signalStrength, 0, sizeof(RIL_SignalStrength_v6));
 
-    /* MBM does not support LTE so set to get GSM signal strength
-     * using -1 for unknown as defined in SignalStrength.java */
     signalStrength->LTE_SignalStrength.signalStrength = -1;
     signalStrength->LTE_SignalStrength.rsrp = -1;
     signalStrength->LTE_SignalStrength.rsrq = -1;
@@ -1570,3 +1568,238 @@ error:
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     goto finally;
 }
+
+/**
+ * RIL_REQUEST_NEIGHBORINGCELL_IDS
+ */
+void requestNeighboringCellIDs(void *data, size_t datalen, RIL_Token t)
+{
+    (void) data; (void) datalen;
+    int network = -1;
+    int dummy = 0;
+    char *dummyStr = NULL;
+    int err = 0;
+    ATResponse *cops_resp = NULL;
+    char *line = NULL;
+
+    /* Determine network radio access technology (AcT) */
+    err = at_send_command_singleline("AT+COPS?", "+COPS:", &cops_resp);
+    if (err < 0 || cops_resp->success == 0) goto error;
+
+    line = cops_resp->p_intermediates->line;
+
+    err = at_tok_start(&line);
+    if (err < 0) goto error;
+    /* Mode */
+    err = at_tok_nextint(&line, &dummy);
+    if (err < 0) goto error;
+    /* Check to see if not registered */
+    if (!at_tok_hasmore(&line)) {
+        No_NCIs(t);
+        goto finally;
+    }
+    /* Format */
+    err = at_tok_nextint(&line, &dummy);
+    if (err < 0) goto error;
+    /* Operator */
+    err = at_tok_nextstr(&line, &dummyStr);
+    if (err < 0) goto error;
+    /* Network */
+    err = at_tok_nextint(&line, &network);
+    if (err < 0) goto error;
+
+    switch (network) {
+    case 0:                    /* GSM (GPRS,2G)*/
+        Get_GSM_NCIs(t);
+        break;
+    case 1:                    /* GSM Compact (Not supported)*/
+        goto error;
+        break;
+    case 2:                    /* UTRAN (WCDMA/UMTS, 3G)*/
+        Get_WCDMA_NCIs(t);
+        break;
+    case 3:                    /* GSM w/EGPRS (EDGE, 2.75G)*/
+    case 4:                    /* UTRAN w/HSDPA (HSDPA,3G)*/
+    case 5:                    /* UTRAN w/HSUPA (HSUPA,3G)*/
+    case 6:                    /* UTRAN w/HSDPA and HSUPA (HSPA,3G)*/
+        No_NCIs(t);
+        break;
+    default:
+        goto error;
+    }
+
+finally:
+    at_response_free(cops_resp);
+    return;
+
+error:
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    goto finally;
+}
+
+/**
+ * GSM Network (GPRS, 2G) Neighborhood Cell IDs
+ */
+void Get_GSM_NCIs(RIL_Token t)
+{
+    int err = 0;
+    char *p = NULL;
+    int n = 0;
+    ATLine *tmp = NULL;
+    ATResponse *gnci_resp = NULL;
+    RIL_NeighboringCell *ptr_cells[MAX_NUM_NEIGHBOR_CELLS];
+
+    err = at_send_command_multiline("AT*EGNCI", "*EGNCI:", &gnci_resp);
+    if (err < 0 ||
+        gnci_resp->success == 0 || gnci_resp->p_intermediates == NULL)
+        goto error;
+
+    tmp = gnci_resp->p_intermediates;
+    while (tmp) {
+        if (n > MAX_NUM_NEIGHBOR_CELLS)
+            goto error;
+        p = tmp->line;
+        if (*p == '*') {
+            char *line = p;
+            char *plmn = NULL;
+            char *lac = NULL;
+            char *cid = NULL;
+            int arfcn = 0;
+            int bsic = 0;
+            int rxlvl = 0;
+            int ilac = 0;
+            int icid = 0;
+
+            err = at_tok_start(&line);
+            if (err < 0) goto error;
+            /* PLMN */
+            err = at_tok_nextstr(&line, &plmn);
+            if (err < 0) goto error;
+            /* LAC */
+            err = at_tok_nextstr(&line, &lac);
+            if (err < 0) goto error;
+            /* CellID */
+            err = at_tok_nextstr(&line, &cid);
+            if (err < 0) goto error;
+            /* ARFCN */
+            err = at_tok_nextint(&line, &arfcn);
+            if (err < 0) goto error;
+            /* BSIC */
+            err = at_tok_nextint(&line, &bsic);
+            if (err < 0) goto error;
+            /* RxLevel */
+            err = at_tok_nextint(&line, &rxlvl);
+            if (err < 0) goto error;
+
+            /* process data for each cell */
+            ptr_cells[n] = alloca(sizeof(RIL_NeighboringCell));
+            ptr_cells[n]->rssi = rxlvl;
+            ptr_cells[n]->cid = alloca(9 * sizeof(char));
+            sscanf(lac,"%x",&ilac);
+            sscanf(cid,"%x",&icid);
+            sprintf(ptr_cells[n]->cid, "%08x", ((ilac << 16) + icid));
+            n++;
+        }
+        tmp = tmp->p_next;
+    }
+
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, ptr_cells,
+                          n * sizeof(RIL_NeighboringCell *));
+
+finally:
+    at_response_free(gnci_resp);
+    return;
+
+error:
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    goto finally;
+}
+
+/**
+ * WCDMA Network (UTMS, 3G) Neighborhood Cell IDs
+ */
+void Get_WCDMA_NCIs(RIL_Token t)
+{
+    int err = 0;
+    char *p = NULL;
+    int n = 0;
+    ATLine *tmp = NULL;
+    ATResponse *wnci_resp = NULL;
+    RIL_NeighboringCell *ptr_cells[MAX_NUM_NEIGHBOR_CELLS];
+
+    err = at_send_command_multiline("AT*EWNCI", "*EWNCI:", &wnci_resp);
+    if (err < 0 || wnci_resp->success == 0)
+        goto error;
+
+    tmp = wnci_resp->p_intermediates;
+    while (tmp) {
+        if (n > MAX_NUM_NEIGHBOR_CELLS)
+            goto error;
+        p = tmp->line;
+        if (*p == '*') {
+            char *line = p;
+            int uarfcn = 0;
+            int psc = 0;
+            int rscp = 0;
+            int ecno = 0;
+            int pathloss = 0;
+
+            err = at_tok_start(&line);
+            if (err < 0) goto error;
+            /* UARFCN */
+            err = at_tok_nextint(&line, &uarfcn);
+            if (err < 0) goto error;
+            /* PSC */
+            err = at_tok_nextint(&line, &psc);
+            if (err < 0) goto error;
+            /* RSCP */
+            err = at_tok_nextint(&line, &rscp);
+            if (err < 0) goto error;
+            /* ECNO */
+            err = at_tok_nextint(&line, &ecno);
+            if (err < 0) goto error;
+            /* PathLoss */
+            err = at_tok_nextint(&line, &pathloss);
+            if (err < 0) goto error;
+
+            /* process data for each cell */
+            ptr_cells[n] = alloca(sizeof(RIL_NeighboringCell));
+            ptr_cells[n]->rssi = rscp;
+            ptr_cells[n]->cid = alloca(9 * sizeof(char));
+            sprintf(ptr_cells[n]->cid, "%08x", psc);
+            n++;
+        }
+        tmp = tmp->p_next;
+    }
+
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, ptr_cells,
+                          n * sizeof(RIL_NeighboringCell *));
+
+finally:
+    at_response_free(wnci_resp);
+    return;
+
+error:
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    goto finally;
+}
+
+/* Not registered or unknown network (NOT UTMS or 3G)
+ * return UNKNOWN_RSSI and UNKNOWN_CID */
+void No_NCIs(RIL_Token t)
+{
+    int n = 0;
+
+    RIL_NeighboringCell *ptr_cells[MAX_NUM_NEIGHBOR_CELLS];
+
+    ptr_cells[n] = alloca(sizeof(RIL_NeighboringCell));
+    ptr_cells[n]->rssi = 99;
+    ptr_cells[n]->cid = alloca(9 * sizeof(char));
+    sprintf(ptr_cells[n]->cid, "%08x", -1);
+
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, ptr_cells,
+                          n * sizeof(RIL_NeighboringCell *));
+
+    return;
+}
+

@@ -24,15 +24,11 @@
 #ifndef U300_RIL_NETWORK_H
 #define U300_RIL_NETWORK_H 1
 
-
 void onNetworkTimeReceived(const char *s);
 void onSignalStrengthChanged(const char *s);
 void onNetworkStatusChanged(const char *s);
-
 int getPreferredNetworkType(void);
-
 int getPreferredNetworkType(void);
-
 void requestSetNetworkSelectionAutomatic(void *data, size_t datalen,
                                          RIL_Token t);
 void requestSetNetworkSelectionManual(void *data, size_t datalen,
@@ -53,11 +49,13 @@ void requestRegistrationState(int request, void *data,
 void requestGprsRegistrationState(int request, void *data,
                               size_t datalen, RIL_Token t);
 void requestOperator(void *data, size_t datalen, RIL_Token t);
-
 void requestRadioPower(void *data, size_t datalen, RIL_Token t);
-
 void pollSignalStrength(void *bar);
-
 void sendTime(void *p);
+void requestNeighboringCellIDs(void *data, size_t datalen, RIL_Token t);
+
+void Get_GSM_NCIs(RIL_Token t);
+void Get_WCDMA_NCIs(RIL_Token t);
+void No_NCIs(RIL_Token t);
 
 #endif
