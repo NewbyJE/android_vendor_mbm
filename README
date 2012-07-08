@@ -1,5 +1,112 @@
-TouchPad4G_vendor_mbm
+Overview
+===========================================================
 
-Modified MBM HAL 4.0.0 ALPHA release for CM9 TouchPad 4G
+This MBM HAL is modified from the SourceForge MBM HAL 4.0.0 ALPHA release for CyanogenMod 9 (Android ICS) specifically for the HP TouchPad 4G which uses the Ericsson f5521gw Mobile Broadband Module (MBM).  
 
-Files should be placed in android/system/vendor/mbm
+The modifications should be applicable to other platforms using Ericsson MBMs and running Android ICS.  
+
+Modification Tracking
+===========================================================
+
+Correct signal strength: SignalStrength.java in Android Phone (java/android/telephony) expects LTE parameters to be set to -1 if the phone does not support LTE.  MBM HAL 4.0.0 ALPHA set the LTE parameters to 0x7FFFFFFF which is not recognized by Android phone as equal to -1.  
+
+Add get_neighboring_cell_ids:  RIL.java (java/com/android/internal/telephony) issues a RIL_REQUEST_NEIGHBORINGCELL_IDS to get a list of neighboring cell ids and received signal strengths. MBM HAL 4.0.0 ALPHA did not include a function to reply to this request and returns a 'FIXME' error.  This modification adds functions to respond to this request when the MBM network state is either GSM (GPRS,2G) or UTRAN (WCDMA/UMTS, 3G), otherwise it returns UNKNOWN_RSSI (99) and UNKNOWN_CID (-1).  A few miscellaneous non-critical modifications are included.  
+
+...
+
+
+Platform Implementation for HP TouchPad 4G
+===========================================================
+
+1.  The MBM HAL files in this repository should be added in vendor/mbm. 
+
+2.  Make the following changes in device/hp/tenderloin:
+
+BoardConfig.mk - indicate MBM support
+-----------------------------------------------------------
+# MBM support
+BOARD_HAVE_GPS_BCM := false
+BOARD_USES_MBM_GPS := true
+BOARD_GPS_LIBRARIES := gps.$(TARGET_BOOTLOADER_BOARD_NAME)
+USE_QEMU_GPS_HARDWARE := true
+
+BoardConfig.mk - change to use 4G specific defconfig
+-----------------------------------------------------------
+TARGET_KERNEL_CONFIG := tenderloin4g_android_defconfig
+
+cm/mk - add GSM support
+-----------------------------------------------------------
+# Inherit GSM common stuff
+$(call inherit-product, vendor/cm/config/gsm.mk)
+
+device_tenderloin.mk - add product packages
+-----------------------------------------------------------
+# MBM
+PRODUCT_PACKAGES += \
+    mbmd \
+    gps.tenderloin \
+    MbmService \
+    libmbm-ril \
+    Mms
+
+full_tenderloin.mk - change to inherit full_base plus telephony
+-----------------------------------------------------------
+$(call inherit-product, $(SRC_TARGET_DIR)/product/full.mk)
+
+init.tenderloin.rc - add to initialize MBM
+-----------------------------------------------------------
+# MBM
+on init
+    setprop mbm.gps.config.gps_ctrl /dev/bus/usb/002/049
+    setprop mbm.gps.config.gps_nmea /dev/ttyACM2
+    setprop mbm.gps.config.gps_pref_mode PGPS
+    setprop mbm.gps.config.supl.enable_ni yes
+    setprop mbm.gps.config.supl.uncert yes
+
+    write /sys/bus/usb/devices/1-1/power/autosuspend 2
+    write /sys/bus/usb/devices/1-1/power/control auto
+    write /sys/bus/usb/devices/1-1/power/wakeup enabled
+    symlink /dev/bus/usb/002/049 /dev/cdc-wdm0
+    symlink /dev/bus/usb/002/050 /dev/cdc-wdm1
+    chown radio radio /dev/cdc-wdm0
+    chmod 0660 /dev/cdc-wdm0
+    chown radio radio /dev/cdc-wdm1
+    chmod 0660 /dev/cdc-wdm1
+
+system.prop - add interface definition
+-----------------------------------------------------------
+# MBM ril
+mobiledata.interfaces=wwan0
+rild.libpath=/system/lib/libmbm-ril.so
+rild.libargs=-d /dev/ttyACM1 -i wwan0
+
+ueventd.tenderloin.rc - set proper permissions
+-----------------------------------------------------------
+# MBM module
+/dev/ttyACM0            0660     radio      radio
+/dev/ttyACM1            0660     radio      radio
+/dev/ttyACM2            0660     radio      radio
+
+overlay/frameworks/base/core/res/res/values/config.xml 
+-----------------------------------------------------------
+add string name for data interface
+
+        <string name="config_datause_iface">wwan0</string>
+
+add networkAttributes
+
+        <item>"mobile,0,0,0,-1,true"</item>
+        <item>"mobile_supl,3,0,2,60000,true"</item>
+        <item>"mobile_dun,4,0,3,60000,true"</item>
+        <item>"bluetooth,7,7,1,-1,true"</item>
+        <item>"wifi_p2p,13,1,0,-1,false"</item>
+
+add radioAttributes
+
+        <item>"0,1"</item>
+        <item>"7,1"</item>
+
+enable SMS
+
+    <bool name="config_sms_capable">true</bool>
+
