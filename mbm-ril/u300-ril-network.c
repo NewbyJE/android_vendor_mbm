@@ -1,6 +1,6 @@
 /* ST-Ericsson U300 RIL
 **
-** Copyright (C) ST-Ericsson AB 2008-2009
+** Copyright (C) ST-Ericsson AB 2008-2012
 ** Copyright 2006, The Android Open Source Project
 **
 ** Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +19,8 @@
 **
 ** Heavily modified for ST-Ericsson U300 modems.
 ** Author: Christian Bejram <christian.bejram@stericsson.com>
+** Author: Kim Tommy Humborstad <kim.tommy.humborstad@stericsson.com>
+** Author: John Newby <newbyje@comcast.net>
 */
 
 #include <stdio.h>
@@ -788,7 +790,6 @@ void requestSetPreferredNetworkType(void *data, size_t datalen,
     int err = 0;
     int rat;
     int arg;
-    RIL_Errno errno = RIL_E_GENERIC_FAILURE;
 
     rat = ((int *) data)[0];
 
@@ -796,28 +797,23 @@ void requestSetPreferredNetworkType(void *data, size_t datalen,
     case PREF_NET_TYPE_GSM_WCDMA_AUTO:
     case PREF_NET_TYPE_GSM_WCDMA:
         arg = PREF_NET_TYPE_3G;
+        LOGD("[%s] network type = auto", __FUNCTION__);
         break;
     case PREF_NET_TYPE_GSM_ONLY:
         arg = PREF_NET_TYPE_2G_ONLY;
+        LOGD("[%s] network type = 2g only", __FUNCTION__);
         break;
     case PREF_NET_TYPE_WCDMA:
         arg = PREF_NET_TYPE_3G_ONLY;
+        LOGD("[%s] network type = 3g only", __FUNCTION__);
         break;
     default:
-        errno = RIL_E_MODE_NOT_SUPPORTED;
-        goto error;
+        LOGW("[%s] unknown network type: (%d)", __FUNCTION__, rat);
     }
-
     pref_net_type = arg;
-
     err = at_send_command("AT+CFUN=%d", arg);
-    if (err == AT_NOERROR) {
-        RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
-        return;
-    }
-
-error:
-    RIL_onRequestComplete(t, errno, NULL, 0);
+    RIL_onRequestComplete(t, (err == AT_NOERROR)? RIL_E_SUCCESS : RIL_E_GENERIC_FAILURE, NULL, 0);
+    return;
 }
 
 /**

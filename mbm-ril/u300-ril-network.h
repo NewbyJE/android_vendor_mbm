@@ -1,6 +1,6 @@
 /* ST-Ericsson U300 RIL
 **
-** Copyright (C) ST-Ericsson AB 2008-2009
+** Copyright (C) ST-Ericsson AB 2008-2012
 ** Copyright 2006, The Android Open Source Project
 **
 ** Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +19,8 @@
 **
 ** Heavily modified for ST-Ericsson U300 modems.
 ** Author: Christian Bejram <christian.bejram@stericsson.com>
+** Author: Kim Tommy Humborstad <kim.tommy.humborstad@stericsson.com>
+** Author: John Newby <newbyje@comcast.net>
 */
 
 #ifndef U300_RIL_NETWORK_H

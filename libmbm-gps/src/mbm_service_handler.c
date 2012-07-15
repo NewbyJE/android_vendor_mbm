@@ -258,7 +258,7 @@ static void parse_message(char *msg)
             pgps_read_data(id, path);
         }
     } else {
-        LOGD("Unknown message from mbm service received");
+        LOGD("Unknown message from mbm service received: %s", data);
     }
 }
 
