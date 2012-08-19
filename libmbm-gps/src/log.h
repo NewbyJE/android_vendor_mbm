@@ -24,8 +24,8 @@
 
 #include <cutils/log.h>
 
-#define ENTER LOGV("%s: enter", __FUNCTION__)
-#define EXIT LOGV("%s: exit", __FUNCTION__)
+#define ENTER ALOGV("%s: enter", __FUNCTION__)
+#define EXIT ALOGV("%s: exit", __FUNCTION__)
 
 
 #endif                          /* end _LIBMBMGPS_LOG_H_ */

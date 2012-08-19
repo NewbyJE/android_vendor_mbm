@@ -79,7 +79,7 @@ static int initializeServiceContext(void)
     context->data_enabled = 0;
     context->isInitialized = 1;
 
-    LOGI("Initialized new gps ctrl context");
+    ALOGI("Initialized new gps ctrl context");
 
     return 0;
 }
@@ -88,7 +88,7 @@ static int initializeServiceContext(void)
 static ServiceContext* get_service_context(void)
 {
     if (!global_service_context.isInitialized)
-        LOGE("Service context not initialized. Possible problems ahead!");
+        ALOGE("Service context not initialized. Possible problems ahead!");
     return &global_service_context;
 }
 
@@ -97,39 +97,39 @@ static int internal_init(void)
     struct sockaddr_un server;
     int sock;
     int err;
-    LOGD("%s", __FUNCTION__);
+    ALOGD("%s", __FUNCTION__);
 
      /* Initialise socket for GPSService message reception */
     unlink(FDNAME);
     sock = socket(AF_UNIX, SOCK_STREAM, 0);
     if (sock < 0) {
-        LOGE("opening gpsservice stream socket: %s", strerror(errno));
+        ALOGE("opening gpsservice stream socket: %s", strerror(errno));
         return -1;
     }
 
-    LOGD("%s, socket=%d", __FUNCTION__, sock);
+    ALOGD("%s, socket=%d", __FUNCTION__, sock);
 
     server.sun_family = AF_UNIX;
     strcpy(server.sun_path, FDNAME);
 
     if (bind(sock, (struct sockaddr *) &server, sizeof(struct sockaddr_un))) {
-        LOGE("binding stream socket: %s", strerror(errno));
+        ALOGE("binding stream socket: %s", strerror(errno));
         return -1;
     }
 
     if (listen(sock, MBMSERVICE_BACKLOG) == -1 ) {
-        LOGE("listen stream socket: %s", strerror(errno));
+        ALOGE("listen stream socket: %s", strerror(errno));
         return -1;
     }
 
-    LOGD("Socket has name: %s, id:%d", server.sun_path, sock);
+    ALOGD("Socket has name: %s, id:%d", server.sun_path, sock);
 
     err = chmod(FDNAME,
                 S_IRUSR | S_IWUSR |
                 S_IRGRP | S_IWGRP |
                 S_IROTH | S_IWOTH);
     if (err < 0)
-        LOGE("Error setting permissions of socket");
+        ALOGE("Error setting permissions of socket");
 
     return sock;
 }
@@ -139,22 +139,22 @@ void service_handler_send_message(char cmd, char *data)
     ServiceContext *context = get_service_context();
     int ret;
 
-    LOGD("%s, enter, %d", __FUNCTION__, context->socket);
+    ALOGD("%s, enter, %d", __FUNCTION__, context->socket);
 
     ret = write(context->socket, &cmd, 1);
     if (ret < 0)
-        LOGE("Error sending to mbm service: %s", strerror(errno));
+        ALOGE("Error sending to mbm service: %s", strerror(errno));
 
     cmd = (char) strlen(data);
     write(context->socket, &cmd, 1);
     if (ret < 0)
-        LOGE("Error sending to mbm service");
+        ALOGE("Error sending to mbm service");
 
     write(context->socket, data, strlen(data));
     if (ret < 0)
-        LOGE("Error sending to mbm service");
+        ALOGE("Error sending to mbm service");
 
-    LOGD("%s, exit", __FUNCTION__);
+    ALOGD("%s, exit", __FUNCTION__);
 }
 
 static int parse_info(char *dst, char *src, char* tag, int max_len)
@@ -189,7 +189,7 @@ static void parse_message(char *msg)
         asprintf(&data, "%s", "");
 
     if (strstr(msg, MSG_BACKGROUND_DATA_SETTING)) {
-        LOGD("Background data allowed: %s", data);
+        ALOGD("Background data allowed: %s", data);
         if (strstr(data, "true")) {
             context->background_data_allowed = 1;
             gpsctrl_set_background_data_allowed(1);
@@ -198,7 +198,7 @@ static void parse_message(char *msg)
             gpsctrl_set_background_data_allowed(0);
         }
     } else if (strstr(msg, MSG_MOBILE_DATA_ALLOWED)) {
-        LOGD("Data enabled: %s", data);
+        ALOGD("Data enabled: %s", data);
         if (strstr(data, "true")) {
             context->data_enabled = 1;
             gpsctrl_set_data_enabled(1);
@@ -207,7 +207,7 @@ static void parse_message(char *msg)
             gpsctrl_set_data_enabled(0);
         }
     } else if (strstr(msg, MSG_ROAMING_ALLOWED)) {
-        LOGD("Roaming data allowed: %s", data);
+        ALOGD("Roaming data allowed: %s", data);
         if (strstr(data, "true")) {
             context->roaming_data_allowed = 1;
             gpsctrl_set_data_roaming_allowed(1);
@@ -221,7 +221,7 @@ static void parse_message(char *msg)
         char password[MAX_PASSWORD_LENGTH];
         char auth[MAX_AUTHTYPE_LENGTH];
 
-        LOGD("%s: %s", MSG_APN_INFO, data);
+        ALOGD("%s: %s", MSG_APN_INFO, data);
 
         if (0 != parse_info(apn, data, "apn=", MAX_APN_LENGTH))
             return;
@@ -238,18 +238,18 @@ static void parse_message(char *msg)
         char s_id[10];
         int id;
 
-        LOGD("%s: %s", MSG_PGPS_DATA, data);
+        ALOGD("%s: %s", MSG_PGPS_DATA, data);
 
         if (strstr(data, "failed"))
             onPgpsDataFailed();
         else {
             if (0 != parse_info(s_id, data, "id=", MAX_PATH_LENGTH)) {
-                LOGD("FAILED TO PARSE ID");
+                ALOGD("FAILED TO PARSE ID");
                 onPgpsDataFailed();
                 return;
             }
             if (0 != parse_info(path, data, "path=", MAX_PATH_LENGTH)) {
-                LOGD("FAILED TO PARSE PATH");
+                ALOGD("FAILED TO PARSE PATH");
                 onPgpsDataFailed();
                 return;
             }
@@ -258,7 +258,7 @@ static void parse_message(char *msg)
             pgps_read_data(id, path);
         }
     } else {
-        LOGD("Unknown message from mbm service received: %s", data);
+        ALOGD("Unknown message from mbm service received: %s", data);
     }
 }
 
@@ -272,20 +272,20 @@ static void* socket_loop(void* arg)
     (void) arg;
 
     if ((ret = internal_init()) < 0) {
-        LOGE("Error initializing socket");
+        ALOGE("Error initializing socket");
         return NULL;
     } else
         socket = ret;
 
-    LOGD("%s, socket=%d", __FUNCTION__, socket);
+    ALOGD("%s, socket=%d", __FUNCTION__, socket);
 
     while(1) {
         msgsock = accept(socket, 0, 0);
         context->socket = msgsock;
-        LOGD("%s, msgsock=%d", __FUNCTION__, msgsock);
+        ALOGD("%s, msgsock=%d", __FUNCTION__, msgsock);
 
         if (msgsock == -1) {
-            LOGE("socket accept: %s, exiting service loop", strerror(errno) );
+            ALOGE("socket accept: %s, exiting service loop", strerror(errno) );
             close(socket);
             return NULL;
         } else {
@@ -293,15 +293,15 @@ static void* socket_loop(void* arg)
                 memset(buf, 0, 1024);
                 len = lsb = msb = 0;
                 if ((rval = read(msgsock, &msb, 1)) < 0)
-                        LOGE("reading stream length: %s", strerror(errno));
+                        ALOGE("reading stream length: %s", strerror(errno));
                 if ((rval = read(msgsock, &lsb, 1)) < 0)
-                        LOGE("reading stream length: %s", strerror(errno));
+                        ALOGE("reading stream length: %s", strerror(errno));
 
                 len |= msb;
                 len = len << 8;
                 len |= lsb;
                 if ((rval = read(msgsock, buf, len)) < 0)
-                    LOGE("reading stream message: %s", strerror(errno) );
+                    ALOGE("reading stream message: %s", strerror(errno) );
                 else if (rval > 0)
                     parse_message(buf);
             } while (rval > 0);
@@ -309,7 +309,7 @@ static void* socket_loop(void* arg)
         close(msgsock);
     }
 
-    LOGD("%s exiting", __FUNCTION__);
+    ALOGD("%s exiting", __FUNCTION__);
     return NULL;
 }
 
@@ -318,13 +318,13 @@ int service_handler_init(void)
     int ret;
 
     if (initializeServiceContext()) {
-        LOGE("Initialize service context failed!");
+        ALOGE("Initialize service context failed!");
         return -1;
     }
 
     ret = pthread_create(&socket_thread, NULL, socket_loop, NULL);
     if (ret < 0) {
-        LOGE("%s error creating socket thread", __FUNCTION__);
+        ALOGE("%s error creating socket thread", __FUNCTION__);
         return -1;
     }
 
@@ -335,7 +335,7 @@ int service_handler_stop(void)
 {
     ServiceContext *context = get_service_context();
 
-    LOGD("%s", __FUNCTION__);
+    ALOGD("%s", __FUNCTION__);
 
     service_handler_send_message(CMD_SERVICE_QUIT, "");
 

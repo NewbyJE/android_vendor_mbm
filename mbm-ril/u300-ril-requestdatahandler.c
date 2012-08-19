@@ -39,11 +39,13 @@
  */
 static void *dummyDispatch(void *data, size_t datalen);
  
+#define dispatchCdmaBrSmsCnf dummyDispatch
 #define dispatchCdmaSms dummyDispatch
 #define dispatchCdmaSmsAck dummyDispatch
-#define dispatchCdmaBrSmsCnf dummyDispatch
+#define dispatchCdmaSubscriptionSource dummyDispatch
 #define dispatchRilCdmaSmsWriteArgs dummyDispatch
-  
+#define dispatchVoiceRadioTech dummyDispatch
+
 static void *dispatchCallForward(void *data, size_t datalen);
 static void *dispatchDial(void *data, size_t datalen);
 static void *dispatchSIM_IO(void *data, size_t datalen);
@@ -68,6 +70,7 @@ static void dummyResponse(void);
 #define responseSMS dummyResponse
 #define responseString dummyResponse
 #define responseStrings dummyResponse
+#define responseStringsNetworks dummyResponse
 #define responseVoid dummyResponse
 
 #define responseSimStatus dummyResponse

@@ -146,14 +146,14 @@ void nmea_reader_set_callbacks(NmeaReader * r, GpsCallbacks * cbs)
 
     r->callback = cbs->location_cb;
     if (cbs->location_cb != NULL && r->fix.flags != 0) {
-        LOGD("%s: sending latest fix to new callback", __FUNCTION__);
+        ALOGD("%s: sending latest fix to new callback", __FUNCTION__);
         r->callback(&r->fix);
         r->fix.flags = 0;
     }
 
     r->sv_status_callback = cbs->sv_status_cb;
     if (cbs->sv_status_cb != NULL) {
-        LOGD("%s: sending latest sv_status to new callback", __FUNCTION__);
+        ALOGD("%s: sending latest sv_status to new callback", __FUNCTION__);
         r->sv_status_callback(&r->sv_status);
         r->sv_status_changed = 0;
     }
@@ -161,7 +161,7 @@ void nmea_reader_set_callbacks(NmeaReader * r, GpsCallbacks * cbs)
     /*old data */
     r->nmea_callback = cbs->nmea_cb;
     if (cbs->nmea_cb != NULL) {
-        LOGD("%s: sending latest nmea sentence to new callback",
+        ALOGD("%s: sending latest nmea sentence to new callback",
              __FUNCTION__);
         r->nmea_callback(time(NULL)*1000, r->in, r->pos + 1);
     }
@@ -232,7 +232,7 @@ static int nmea_reader_update_date(NmeaReader * r, Token date)
 
     ENTER;
     if (tok.p + 6 != tok.end) {
-        LOGD("date not properly formatted: '%.*s'", tok.end - tok.p,
+        ALOGD("date not properly formatted: '%.*s'", tok.end - tok.p,
              tok.p);
         return -1;
     }
@@ -241,7 +241,7 @@ static int nmea_reader_update_date(NmeaReader * r, Token date)
     year = str2int(tok.p + 4, tok.p + 6) + 2000;
 
     if ((day | mon | year) < 0) {
-        LOGD("date not properly formatted: '%.*s'", tok.end - tok.p,
+        ALOGD("date not properly formatted: '%.*s'", tok.end - tok.p,
              tok.p);
         return -1;
     }
@@ -278,7 +278,7 @@ nmea_reader_update_latlong(NmeaReader * r,
     ENTER;
     tok = latitude;
     if (tok.p + 6 > tok.end) {
-        LOGD("latitude is too short: '%.*s'", tok.end - tok.p, tok.p);
+        ALOGD("latitude is too short: '%.*s'", tok.end - tok.p, tok.p);
         return -1;
     }
     lat = hhmm2dcoord(tok);
@@ -287,7 +287,7 @@ nmea_reader_update_latlong(NmeaReader * r,
 
     tok = longitude;
     if (tok.p + 6 > tok.end) {
-        LOGD("longitude is too short: '%.*s'", tok.end - tok.p, tok.p);
+        ALOGD("longitude is too short: '%.*s'", tok.end - tok.p, tok.p);
         return -1;
     }
     lon = hhmm2dcoord(tok);
@@ -383,9 +383,9 @@ static void nmea_reader_parse(NmeaReader * r)
     Token tok;
 
     ENTER;
-    /* LOGD("Received: %.*s", r->pos, r->in); */
+    /* ALOGD("Received: %.*s", r->pos, r->in); */
     if (r->pos < 9) {
-        LOGD("Too short. discarded.");
+        ALOGD("Too short. discarded.");
         return;
     }
 
@@ -393,17 +393,17 @@ static void nmea_reader_parse(NmeaReader * r)
 #if 0 /* Kept for debugging purposes */
     {
         int n;
-        LOGD("Found %d tokens", tzer->count);
+        ALOGD("Found %d tokens", tzer->count);
         for (n = 0; n < tzer->count; n++) {
             Token tok = nmea_tokenizer_get(tzer, n);
-            LOGD("%2d: '%.*s'", n, tok.end - tok.p, tok.p);
+            ALOGD("%2d: '%.*s'", n, tok.end - tok.p, tok.p);
         }
     }
 #endif
     tok = nmea_tokenizer_get(tzer, 0);
 
     if (tok.p + 5 > tok.end) {
-        LOGD("sentence id '%.*s' too short, ignored.", tok.end - tok.p,
+        ALOGD("sentence id '%.*s' too short, ignored.", tok.end - tok.p,
              tok.p);
         return;
     }
@@ -435,7 +435,7 @@ static void nmea_reader_parse(NmeaReader * r)
 */
 /* GGA,214258.00,5740.857675,N,01159.649523,E,1,08,3.0,104.0,M,,,,*32 */
     if (!memcmp(tok.p, "GGA", 3)) {
-        /* LOGD("GGA"); */
+        /* ALOGD("GGA"); */
         /* GPS fix */
         Token tok_fixstaus = nmea_tokenizer_get(tzer, 6);
         if (tok_fixstaus.p[0] > '0') {
@@ -460,7 +460,7 @@ static void nmea_reader_parse(NmeaReader * r)
 */
 /* GSA,A,3,02,04,07,13,20,23,,,,,,,6.7,3.0,6.0*36 */
     } else if (!memcmp(tok.p, "GSA", 3)) {
-        /* LOGD("GSA"); */
+        /* ALOGD("GSA"); */
         Token tok_fixStatus = nmea_tokenizer_get(tzer, 2);
         int i;
 
@@ -480,7 +480,7 @@ static void nmea_reader_parse(NmeaReader * r)
                 if (prn > 0) {
                     r->sv_status.used_in_fix_mask |= (1ul << (prn - 1));
                     r->sv_status_changed = 1;
-                    /* LOGD("%s: fix mask is %d", __FUNCTION__,
+                    /* ALOGD("%s: fix mask is %d", __FUNCTION__,
                          r->sv_status.used_in_fix_mask); */
                 }
 
@@ -498,7 +498,7 @@ static void nmea_reader_parse(NmeaReader * r)
 **  $GPGLL,4916.45,N,12311.12,W,225444,A*31
 */
     } else if (!memcmp(tok.p, "GLL", 3)) {
-        /* LOGD("GLL"); */
+        /* ALOGD("GLL"); */
         Token tok_fixStatus = nmea_tokenizer_get(tzer, 6);
 
         if (tok_fixStatus.p[0] == 'A') {
@@ -508,7 +508,7 @@ static void nmea_reader_parse(NmeaReader * r)
             Token tok_longitude = nmea_tokenizer_get(tzer, 3);
             Token tok_longitudeHemi = nmea_tokenizer_get(tzer, 4);
 
-            /* LOGD("in GGL, fixStatus=%c", tok_fixStatus.p[0]); */
+            /* ALOGD("in GGL, fixStatus=%c", tok_fixStatus.p[0]); */
             if (tok_fixStatus.p[0] == 'A') {
                 nmea_reader_update_latlong(r, tok_latitude,
                                            tok_latitudeHemi.p[0],
@@ -532,7 +532,7 @@ static void nmea_reader_parse(NmeaReader * r)
 */
 /* RMC,232401.00,A,5740.841023,N,01159.626002,E,000.0,244.0,031109,,,A*56 */
     } else if (!memcmp(tok.p, "RMC", 3)) {
-        /* LOGD("RMC"); */
+        /* ALOGD("RMC"); */
         Token tok_fixStatus = nmea_tokenizer_get(tzer, 2);
 
         if (tok_fixStatus.p[0] == 'A') {
@@ -546,7 +546,7 @@ static void nmea_reader_parse(NmeaReader * r)
             Token tok_bearing = nmea_tokenizer_get(tzer, 8);
             Token tok_date = nmea_tokenizer_get(tzer, 9);
 
-            /* LOGD("in RMC, fixStatus=%c", tok_fixStatus.p[0]); */
+            /* ALOGD("in RMC, fixStatus=%c", tok_fixStatus.p[0]); */
             if (tok_fixStatus.p[0] == 'A') {
                 nmea_reader_update_date(r, tok_date);
                 nmea_reader_update_time(r, tok_time);
@@ -576,10 +576,10 @@ static void nmea_reader_parse(NmeaReader * r)
 */
 /* GSV,1,1,01,07,,,49,,,,,,,,,,,,*72 */
     } else if (!memcmp(tok.p, "GSV", 3)) {
-        /* LOGD("GSV"); */
+        /* ALOGD("GSV"); */
 
         Token tok_noSatellites = nmea_tokenizer_get(tzer, 3);
-        /* LOGD("NR sat: '%.*s'", tok.end - tok.p, tok.p); */
+        /* ALOGD("NR sat: '%.*s'", tok.end - tok.p, tok.p); */
         int noSatellites =
             str2int(tok_noSatellites.p, tok_noSatellites.end);
 
@@ -631,7 +631,7 @@ static void nmea_reader_parse(NmeaReader * r)
 
             if (sentence == totalSentences) {
                 r->sv_status_changed = 1;
-                /* LOGD("%s: GSV message with total satellites %d",
+                /* ALOGD("%s: GSV message with total satellites %d",
                      __FUNCTION__, r->sv_status.num_svs); */
 
             }
@@ -639,7 +639,7 @@ static void nmea_reader_parse(NmeaReader * r)
 
     } else {
         tok.p -= 2;
-        /* LOGD("unknown sentence '%.*s", tok.end - tok.p, tok.p); */
+        /* ALOGD("unknown sentence '%.*s", tok.end - tok.p, tok.p); */
     }
 
     if ((r->fix.flags != 0) && r->update) {
@@ -668,20 +668,20 @@ static void nmea_reader_parse(NmeaReader * r)
         }
         gmtime_r((time_t *) & r->fix.timestamp, &utc);
         p += snprintf(p, end - p, " time=%s", asctime(&utc));
-        LOGD("%s", temp);
+        ALOGD("%s", temp);
 #endif
         if (r->callback) {
             r->callback(&r->fix);
             r->fix.flags = 0;
             r->update = 0;
         } else {
-            LOGE("no callback, keeping data until needed !");
+            ALOGE("no callback, keeping data until needed !");
         }
     }
 
     if (r->sv_status_changed != 0) {
         if (r->sv_status_callback) {
-            /* LOGD("update sv status"); */
+            /* ALOGD("update sv status"); */
             r->sv_status_callback(&r->sv_status);
             r->sv_status_changed = 0;
         }
@@ -695,7 +695,7 @@ void nmea_reader_add(NmeaReader * r, char *nmea)
     unsigned int i;
 
     ENTER;
-    /* LOGD("%s: %s", __FUNCTION__, nmea); */
+    /* ALOGD("%s: %s", __FUNCTION__, nmea); */
 
     for (i = 0; i < strlen(nmea); i++)
         nmea_reader_addc(r, nmea[i]);
@@ -706,7 +706,7 @@ void nmea_reader_add(NmeaReader * r, char *nmea)
 void nmea_reader_addc(NmeaReader * r, int c)
 {
     ENTER;
-    LOGV("%s: %c", __FUNCTION__, (char) c);
+    ALOGV("%s: %c", __FUNCTION__, (char) c);
     if (r->overflow) {
         r->overflow = (c != '\n');
         return;
@@ -722,7 +722,7 @@ void nmea_reader_addc(NmeaReader * r, int c)
     r->pos += 1;
 
     if (c == '\n') {
-        /* LOGD("Got an nmea string, parsing."); */
+        /* ALOGD("Got an nmea string, parsing."); */
         nmea_reader_parse(r);
         if (r->nmea_callback) {
             struct timeval tv;
