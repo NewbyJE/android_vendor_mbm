@@ -86,7 +86,8 @@ enum CREG_AcT {
     CGREG_ACT_GSM_EGPRS         = 3,
     CGREG_ACT_UTRAN_HSDPA       = 4,
     CGREG_ACT_UTRAN_HSUPA       = 5,
-    CGREG_ACT_UTRAN_HSUPA_HSDPA = 6
+    CGREG_ACT_UTRAN_HSUPA_HSDPA = 6,
+    CGREG_ACT_UTRAN_HSPAP       = 7  /* Dummy Value for HSPA Evol */
 };
 
 /* +CGREG stat values */
@@ -787,9 +788,9 @@ void requestSetPreferredNetworkType(void *data, size_t datalen,
                                     RIL_Token t)
 {
     (void) datalen;
+    int arg = 0;
     int err = 0;
     int rat;
-    int arg;
 
     rat = ((int *) data)[0];
 
@@ -1057,10 +1058,13 @@ char *getNetworkType(int def){
             at_response_free(p_response);
             LOGI("Max speed %i/%i, UL/DL", ul, dl);
 
+            network = CGREG_ACT_UTRAN;
+            if (dl > 384)
+                network = CGREG_ACT_UTRAN_HSDPA;
             if (ul > 384)
                 network = CGREG_ACT_UTRAN_HSUPA_HSDPA;
-            else
-                network = CGREG_ACT_UTRAN_HSDPA;
+            if (dl > 14400)
+                network = CGREG_ACT_UTRAN_HSPAP;
         }
     }
     else if (gsm_rinfo) {
@@ -1085,10 +1089,13 @@ char *getNetworkType(int def){
         networkType = RADIO_TECH_HSDPA;
         break;
     case CGREG_ACT_UTRAN_HSUPA:
-        networkType = RADIO_TECH_HSUPA;
+        networkType = RADIO_TECH_HSUPA; /* Note: Not used */
         break;
     case CGREG_ACT_UTRAN_HSUPA_HSDPA:
         networkType = RADIO_TECH_HSPA;
+        break;
+    case CGREG_ACT_UTRAN_HSPAP:
+        networkType = RADIO_TECH_HSPAP;
         break;
     default:
         networkType = RADIO_TECH_UNKNOWN;
@@ -1606,19 +1613,17 @@ void requestNeighboringCellIDs(void *data, size_t datalen, RIL_Token t)
 
     switch (network) {
     case 0:                    /* GSM (GPRS,2G)*/
+    case 3:                    /* GSM w/EGPRS (EDGE, 2.75G)*/
         Get_GSM_NCIs(t);
         break;
     case 1:                    /* GSM Compact (Not supported)*/
         goto error;
         break;
     case 2:                    /* UTRAN (WCDMA/UMTS, 3G)*/
-        Get_WCDMA_NCIs(t);
-        break;
-    case 3:                    /* GSM w/EGPRS (EDGE, 2.75G)*/
     case 4:                    /* UTRAN w/HSDPA (HSDPA,3G)*/
     case 5:                    /* UTRAN w/HSUPA (HSUPA,3G)*/
     case 6:                    /* UTRAN w/HSDPA and HSUPA (HSPA,3G)*/
-        No_NCIs(t);
+        Get_WCDMA_NCIs(t);
         break;
     default:
         goto error;

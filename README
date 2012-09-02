@@ -10,9 +10,22 @@ Modification Tracking
 
 Correct signal strength: SignalStrength.java in Android Phone (java/android/telephony) expects LTE parameters to be set to -1 if the phone does not support LTE.  MBM HAL 4.0.0 ALPHA set the LTE parameters to 0x7FFFFFFF which is not recognized by Android phone as equal to -1 (0xFFFFFFFF).  
 
-Add get_neighboring_cell_ids:  RIL.java (java/com/android/internal/telephony) issues a RIL_REQUEST_NEIGHBORINGCELL_IDS to get a list of neighboring cell ids and received signal strengths. MBM HAL 4.0.0 ALPHA did not include a function to reply to this request and returns a 'FIXME' error.  This modification adds functions to respond to this request when the MBM network state is either GSM (GPRS,2G) or UTRAN (WCDMA/UMTS, 3G), otherwise it returns UNKNOWN_RSSI (99) and UNKNOWN_CID (-1).  A few miscellaneous non-critical modifications are included.  
+Add get_neighboring_cell_ids:  RIL.java (java/com/android/internal/telephony) issues a RIL_REQUEST_NEIGHBORINGCELL_IDS to get a list of neighboring cell ids and received signal strengths. MBM HAL 4.0.0 ALPHA did not include a function to reply to this request and returns a 'FIXME' error.  This modification adds functions to respond to this request when the MBM network state is either GSM (GPRS,2G) or UTRAN (WCDMA/UMTS, 3G), otherwise it returns UNKNOWN_RSSI (99) and UNKNOWN_CID (-1).  A few miscellaneous non-critical modifications are included. Requires correction to telephony/java/android/telephony/NeighboringCellInfo.java and telephony/java/com/android/internal/telephony/RIL.java.  
 
 Added additional log messages for debug tracking and updated copyright info.  
+
+Temporaily turned off subscription to ST-Ericsson time zone/NITZ reporting since it was contributing to AT Timeouts.  
+
+Added enhanced network reporting and status bar symbols for f5521gw, per below.  Requires several corrections to Android ICS to properly recognize HSPA+ (HSPAP).  
+
+  Standard        Download    Upload     Symbol
+  ------------    --------    --------   ------
+  GSM/GPRS        0.0856      0.0428      "G"
+  EDGE Evol       1.8944      0.9472      "E"
+  WCDMA           0.384       0.384       "3G"
+  HSDPA           14.4        0.384       "H"
+  HSDPA+HSUPA     14.4        5.76        "H"
+  HSPA Evol       21          5.76        "H+"
 
 ...
 
