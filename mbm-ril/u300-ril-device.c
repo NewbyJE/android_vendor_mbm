@@ -261,12 +261,13 @@ void onSIMReady(void *p)
     at_send_command("AT+CMGF=0");
 
     /* Subscribe to ST-Ericsson time zone/NITZ reporting.
-     */
+     *
     err = at_send_command("AT*ETZR=3");
     if (err != AT_NOERROR) {
         ALOGD("%s() Degrading nitz to mode 2", __func__);
         at_send_command("AT*ETZR=2");
     }
+     */
 
     /* Configure Mobile Equipment Event Reporting.
      *  mode = 3 - Forward unsolicited result codes directly to the TE;
